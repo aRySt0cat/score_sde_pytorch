@@ -23,7 +23,7 @@ class Scheduler(ABC):
 
 class Linear(Scheduler):
     def get_sde_beta(self, t):
-        return self.beta_0 + t * (self.beta_1 - self.beta_0)
+        return self.beta_min + t * (self.beta_max - self.beta_min)
 
 
 class Sigmoid(Scheduler):
