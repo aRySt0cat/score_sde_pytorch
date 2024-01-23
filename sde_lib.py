@@ -3,6 +3,7 @@ import abc
 import torch
 import numpy as np
 
+import schedulers
 
 class SDE(abc.ABC):
   """SDE abstract class. Functions are designed for a mini-batch of inputs."""
@@ -110,7 +111,7 @@ class SDE(abc.ABC):
 
 
 class VPSDE(SDE):
-  def __init__(self, beta_min=0.1, beta_max=20, N=1000):
+  def __init__(self, beta_min=0.1, beta_max=20, N=1000, scheduler=schedulers.Linear):
     """Construct a Variance Preserving SDE.
 
     Args:
@@ -122,7 +123,8 @@ class VPSDE(SDE):
     self.beta_0 = beta_min
     self.beta_1 = beta_max
     self.N = N
-    self.discrete_betas = torch.linspace(beta_min / N, beta_max / N, N)
+    self.scheduler = scheduler(beta_min, beta_max, N)
+    self.discrete_betas = self.scheduler.get_discrete_betas()
     self.alphas = 1. - self.discrete_betas
     self.alphas_cumprod = torch.cumprod(self.alphas, dim=0)
     self.sqrt_alphas_cumprod = torch.sqrt(self.alphas_cumprod)
@@ -133,7 +135,7 @@ class VPSDE(SDE):
     return 1
 
   def sde(self, x, t):
-    beta_t = self.beta_0 + t * (self.beta_1 - self.beta_0)
+    beta_t = self.scheduler.get_sde_beta(t)
     drift = -0.5 * beta_t[:, None, None, None] * x
     diffusion = torch.sqrt(beta_t)
     return drift, diffusion
